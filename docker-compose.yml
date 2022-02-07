@@ -1,0 +1,62 @@
+version: "3"
+services:
+  nginx:
+    container_name: bas-nginx
+    build: ./docker/nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/usr/share/nginx/html
+    depends_on:
+      - php
+    tty: true
+    restart: always
+
+  php:
+    container_name: bas-php
+    build: ./docker/php
+    volumes:
+      - ./src:/usr/share/nginx/html
+    depends_on:
+      - mysql
+      - mailhog
+      - minio
+    tty: true
+    restart: always
+
+  mysql:
+    container_name: bas-mysql
+    build: ./docker/mysql
+    ports:
+      - "13306:3306"
+    volumes:
+      # MySQLデータ
+      - ./docker/mysql/data:/var/lib/mysql
+      # 初期化用のSQL配置
+      - ./docker/mysql/sql:/docker-entrypoint-initdb.d
+    tty: true
+    restart: always
+  mailhog:
+    container_name: bas-mailhog
+    build:
+      context: ./docker/mailhog
+      dockerfile: Dockerfile
+    ports:
+      # HTTP
+      - "8025:8025"
+      # SMTP
+      - "1025:1025"
+    restart: always
+  minio:
+    build: ./docker/minio
+    container_name: bas-minio
+    environment:
+        MINIO_ROOT_USER: minio_user
+        MINIO_ROOT_PASSWORD: minio_password
+    entrypoint: bash
+    command: -c "/opt/bin/minio server /export --address :9999 --console-address :9001"
+    volumes:
+        - ./docker/minio/data:/export
+    ports:
+        - '9000:9999'
+        - '9001:9001'
